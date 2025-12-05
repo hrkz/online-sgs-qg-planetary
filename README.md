@@ -2,7 +2,7 @@
   <img src="https://github.com/hrkz/online-sgs-qg-planetary/blob/main/assets/repo-abstract.png" alt="Repository Abstract" width="300"/>
 </p>
 
-> This repository contains a JAX implementation for the paper ["Online learning of subgrid-scale models for quasi-geostrophic turbulence in planetary interiors"](#) submitted to Journal of Fluid Mechanics. It can be used to reproduce results presented in the manuscript.
+> This repository contains a JAX implementation for the paper ["Online learning of subgrid-scale models for quasi-geostrophic turbulence in planetary interiors"](https://arxiv.org/abs/2511.14581) submitted to the Journal of Fluid Mechanics (JFM). It can be used to reproduce results presented in the manuscript.
 
 ---
 
@@ -37,7 +37,7 @@ In order to generate a dataset for the learning stack, we first need to setup a 
 uv run snapshot.py -n i -E 2e-7 -cte_beta -1 -n_m 640 -n_s 321 -dt 4e-8 -T 0.01
 ```
 
-Once the script finishes, a `snapshot.h5` file is created under the folder `data/i/`. We can now launch the notebook `docs/config_stats.ipynb` to analyse the statistics of the configuration and thus determine the timescales for the dataset generation. Running the script until the `get_stats` function, we are provided with the turnover time $t_{L}$ and the number of sub-trajectories of $N_{\mathrm{steps}} = 25$ discrete timesteps per turnovers for a continuous sampling (as used in the paper). The last cell can be used to generate the decorrelation plots of an ensemble of perturbed simulations.
+Once the script finishes, a `snapshot.h5` file is created under the folder `data/i/`. We can now launch the notebook `docs/config_stats.ipynb` to analyse the statistics of the configuration and thus determine the timescales for the dataset generation. Running the cells until the `get_stats` function, we are provided with the turnover time $t_{L}$ and the number of sub-trajectories of $N_{\mathrm{steps}} = 25$ discrete timesteps per turnovers for a continuous sampling (as used in the paper). The last cell can be used to generate the decorrelation plots of an ensemble of perturbed simulations.
 
 ### Generating the coarse-grained dataset
 
