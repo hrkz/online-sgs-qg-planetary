@@ -18,10 +18,6 @@ from models.qg_annulus import (
     galerkin_coarse_graining,
     cartesian_forcing,
 )
-from utils import (
-    coef_r,
-    diff_r,
-)
 
 def main(args: argparse.Namespace) -> None:
     data_path = os.path.join(os.path.join(os.getcwd(), 'data'), args.config)

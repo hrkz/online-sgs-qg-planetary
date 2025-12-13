@@ -327,7 +327,7 @@ def init_u(eq: QgAnnulus, amp_u: float) -> Tuple[np.ndarray, np.ndarray]:
     up_m = np.zeros((eq.n_m, eq.n_s), dtype=np.complex128)
     up_m[0] = amp_u * np.sin(np.pi * (eq.s_grid - eq.s_i))
     dup_m = jax.vmap(diff_r)(up_m)
-    om_m = dup_m + up_m / eq.s_grid - 1j*eq.m * us_m / eq.s_grid
+    om_m = dup_m + up_m / eq.s_grid
     return (
         up_m, 
         om_m

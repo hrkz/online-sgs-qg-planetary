@@ -15,7 +15,6 @@ from models.qg_annulus import (
     QgAnnulus, 
     dynamical_solver,
     cartesian_forcing,
-    reynolds
 )
 
 def main(args: argparse.Namespace) -> None:

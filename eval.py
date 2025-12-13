@@ -27,7 +27,6 @@ from models.qg_annulus import (
 from models.qga_next import (
     QgaNext,
     mod_relu,
-    cx_gelu
 )
 
 def main(args: argparse.Namespace) -> None:

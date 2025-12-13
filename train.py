@@ -26,7 +26,6 @@ from models.qg_annulus import (
 from models.qga_next import (
     QgaNext,
     mod_relu,
-    cx_gelu
 )
 from utils import (
     quad_r
@@ -88,7 +87,7 @@ def main(args: argparse.Namespace) -> None:
         activation=mod_relu,
         rngs=rngs
     )
-    #print(eq_model)
+    print(eq_model)
 
     optimizer = nnx.Optimizer(eq_model, optax.adamw(args.lr), wrt=nnx.Param)
 
