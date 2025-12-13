@@ -37,7 +37,7 @@ In order to generate a dataset for the learning stack, we first need to setup a 
 uv run snapshot.py -n i -E 2e-7 -cte_beta -1 -n_m 640 -n_s 321 -dt 4e-8 -T 0.01
 ```
 
-Once the script finishes, a `snapshot.h5` file is created under the folder `data/i/`. We can now launch the notebook `docs/config_stats.ipynb` to analyse the statistics of the configuration and thus determine the timescales for the dataset generation. Running the cells until the `get_stats` function, we are provided with the turnover time $t_{L}$ and the number of sub-trajectories of $N_{\mathrm{steps}} = 25$ discrete timesteps per turnovers for a continuous sampling (as used in the paper). The last cell can be used to generate the decorrelation plots of an ensemble of perturbed simulations.
+Once the script finishes, a `snapshot.h5` file is created under the folder `data/i/`. We can now launch the notebook `docs/config_stats.ipynb` to analyse the statistics of the configuration and thus determine the timescales for the dataset generation. Running the cells until the `get_stats` function, we are provided with the turnover time $t_{L}$ and the number of sub-trajectories of $N_{\text{steps}} = 25$ discrete timesteps per turnovers for a continuous sampling (as used in the paper). The last cell can be used to generate the decorrelation plots of an ensemble of perturbed simulations.
 
 ### Generating the coarse-grained dataset
 
