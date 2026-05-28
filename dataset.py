@@ -51,9 +51,8 @@ def main(args: argparse.Namespace) -> None:
     data_samples = []
     data_t0 = []
 
-    total_iters = int(np.round(args.timespan / args.dt))
-    sub_trajs_freq = int(total_iters / args.sub_trajs)
-    print('Generating dataset...')
+    total_iters = args.samples * args.coarse_factor
+    sub_trajs_freq = args.coarse_factor * args.steps
     pbar = tqdm.tqdm(range(total_iters), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
     for i in pbar:
         c, ps_m, us_m, up_m, om_m = solver(ps_m, us_m, up_m, om_m)
@@ -61,10 +60,6 @@ def main(args: argparse.Namespace) -> None:
             print('Solver crashed with cfl =',c)
             exit(1)
         time += args.dt
-
-        cur_sub_traj = i // sub_trajs_freq
-        if cur_sub_traj == args.sub_trajs:
-            break
 
         sub_traj_iter = i % sub_trajs_freq
         if sub_traj_iter == 0: 
@@ -90,6 +85,15 @@ def main(args: argparse.Namespace) -> None:
                          data=np.array(data_t0))
         f.create_dataset('f_m',
                          data=np.array(data_samples))
+        
+    eq.save(
+        os.path.join(data_path, args.name + '_snapshot.h5'),
+        time,
+        ps_m, 
+        us_m, 
+        up_m, 
+        om_m
+    )
                 
 
 if __name__ == '__main__':
@@ -107,10 +111,8 @@ if __name__ == '__main__':
     parser.add_argument('-radius_f', type=float, default=0.04, help='Cartesian forcing: pump radius')
     parser.add_argument('-amp_f', type=float, default=2e10, help='Cartesian forcing: amplitude')
     
-    parser.add_argument('-timespan', type=float, help='Temporal span of the dataset', required=True)
-    parser.add_argument('-sub_trajs', type=int, help='Number of sub-trajectories', required=True)
+    parser.add_argument('-samples', type=int, help='Total number of samples for the dataset', required=True)
     parser.add_argument('-steps', type=int, help='Number of discrete time steps for a sub-trajectory', required=True)
-
     parser.add_argument('-coarse_factor', type=int, help='Coarsening factor for grid resolution and time step', required=True)
     
     args = parser.parse_args()

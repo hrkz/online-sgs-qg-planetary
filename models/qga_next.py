@@ -55,16 +55,18 @@ class QgaNext(nnx.Module):
         self.blocks = nnx.List()
         cur_features = in_features
         for (kernel, features) in blocks:
-            self.blocks.append((
+            self.blocks.append(nnx.data((
                 NextBlock(activation, cur_features, features, (kernel,), rngs=rngs),       # up_0 block
                 NextBlock(activation, cur_features, features, (kernel, kernel), rngs=rngs) # om_m block
-            ))
+            )))
             cur_features = features
         self.lin_up_0 = nnx.Linear(cur_features, out_features, rngs=rngs)
         self.lin_om_m = nnx.Linear(cur_features, out_features, rngs=rngs)
     
     def __call__(self, f):
-        f = (f - self.means) / self.stds
+        f_real = (f.real - self.means.real) / self.stds.real
+        f_imag = (f.imag - self.means.imag) / self.stds.imag
+        f = f_real + 1j*f_imag
         up_0, om_m = jnp.split(f, [1], axis=1)
         for (up_0_block, om_m_block) in self.blocks:
             up_0 = up_0_block(up_0)

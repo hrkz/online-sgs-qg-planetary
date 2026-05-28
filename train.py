@@ -26,6 +26,7 @@ from models.qg_annulus import (
 from models.qga_next import (
     QgaNext,
     mod_relu,
+    cx_gelu
 )
 from utils import (
     quad_r
@@ -60,8 +61,8 @@ def main(args: argparse.Namespace) -> None:
              1, 
             -1)
 
-    f_means = np.mean(f_m, axis=(0, 1, 2))
-    f_stds  = np.std (f_m, axis=(0, 1, 2))
+    f_means = np.mean(f_m.real, axis=(0, 1, 2)) + 1j*np.mean(f_m.imag, axis=(0, 1, 2))
+    f_stds  = np.std (f_m.real, axis=(0, 1, 2)) + 1j*np.std (f_m.imag, axis=(0, 1, 2))
     print('''Dataset statistics: 
         ps_m = {:.4} ± σ({:.4})
         us_m = {:.4} ± σ({:.4})
@@ -76,7 +77,7 @@ def main(args: argparse.Namespace) -> None:
     sub_trajs = int(len(f_m) / steps)
     f_m = np.array(np.split(f_m, sub_trajs, axis=0))
 
-    rngs = nnx.Rngs(123)
+    rngs = nnx.Rngs(42)
     key = rngs.params()
     eq_model = QgaNext(
         in_features=3, # (us_m, up_m, om_m)

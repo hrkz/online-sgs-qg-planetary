@@ -475,26 +475,28 @@ def azimuthal_spectrum(
 
 def hankel_spectrum(
     eq: QgAnnulus, 
-    m_roots: jnp.ndarray, 
-    kernels: jnp.ndarray, 
-    f_m: jnp.ndarray, 
+    m_roots: np.ndarray,
+    m_kr: np.ndarray, 
+    kernels: np.ndarray, 
+    f_m: np.ndarray, 
     n_max_m: Optional[int] = None
-) -> jnp.ndarray:
+) -> np.ndarray:
+    from scipy.special import jv, hankel1
     """Compute the Bessel-Fourier spectrum f(k)."""
     if n_max_m is None:
         n_max_m = eq.n_m
-    n_max_m = min(n_max_m, m_roots.shape[0])
-    f_k = np.zeros((n_max_m, eq.n_s))
+    n_max_m = min(n_max_m, f_m.shape[0])
+    f_k = np.zeros_like(m_roots)
     for m in range(n_max_m):
-        f_hat = jax.vmap(quad_r)(kernels[m] * f_m[m, ::-1] * eq.s_grid[::-1])
-        vmin = scipy.special.jv(m, m_roots[m] * eq.s_o)**2
-        vmax = scipy.special.jv(m, m_roots[m] * eq.s_i)**2
-        f_nrm = m_roots[m]**2 * np.abs(scipy.special.hankel1(m, m_roots[m] * eq.s_o))**2
-        f_nrm = np.where(vmin > np.finfo(np.float64).eps,
+        f_hat = jax.vmap(quad_r)(kernels[m] * f_m[m] * eq.s_grid[::-1])
+        vmin = jv(m, m_kr[m] * eq.s_o)**2
+        vmax = jv(m, m_kr[m] * eq.s_i)**2
+        f_nrm = np.abs(hankel1(m, m_kr[m] * eq.s_o))**2
+        f_nrm = np.where(vmin > 1e-10,
                          f_nrm * vmax / (vmax - vmin), 
                          f_nrm
                         )
-        f_k[m] = 0.5 * np.pi**2 * f_nrm * np.abs(f_hat)**2
+        f_k[m, :len(m_kr[m])] = 0.5 * np.pi**2 * f_nrm * m_kr[m]**2 * np.abs(f_hat)**2
     f_k[0 ] *= np.pi
     f_k[1:] *= 2 * np.pi
     return f_k

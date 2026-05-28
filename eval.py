@@ -1,5 +1,4 @@
 import argparse
-import warnings
 import tqdm
 import h5py
 import os
@@ -23,6 +22,7 @@ from models.qg_annulus import (
     QgAnnulus, 
     dynamical_solver,
     cartesian_forcing,
+    galerkin_coarse_graining,
 )
 from models.qga_next import (
     QgaNext,
@@ -31,31 +31,15 @@ from models.qga_next import (
 
 def main(args: argparse.Namespace) -> None:
     data_path = os.path.join(os.path.join(os.getcwd(), 'data'), args.config)
-    eq, time, ps_m, us_m, up_m, om_m = QgAnnulus.load(os.path.join(data_path, 'snapshot.h5'))
+    eq, time, ps_m, us_m, up_m, om_m = QgAnnulus.load(os.path.join(data_path, args.name + '_snapshot.h5'))
     print(eq)
-    
+
     save_path = os.path.join(args.save_path, args.config)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
     with h5py.File(os.path.join(data_path, args.name + '_dataset.h5'), 'r') as f:
-        dt = f.attrs['dt']
-        steps = f.attrs['steps']
         coarse_factor = f.attrs['coarse_factor']
-
-        dt_coarse = dt * coarse_factor
-        time_coarse = f['t_0'][-1] + (steps - 1) * dt_coarse
-        states_coarse = f['f_m'][-1]
-
-        n_m_coarse = int((eq.n_m - 1) / coarse_factor) + 1
-        n_s_coarse = int((eq.n_s - 1) / coarse_factor) + 1
-        eq_coarse = QgAnnulus(
-            E=eq.E,
-            cte_beta=eq.cte_beta,
-            radius_ratio=eq.s_i / eq.s_o,
-            n_m=n_m_coarse,
-            n_s=n_s_coarse
-        )
 
     # DNS
     file_dns = os.path.join(save_path, args.name + '_eval_dns.h5')
@@ -69,31 +53,46 @@ def main(args: argparse.Namespace) -> None:
                 om_m: jnp.ndarray
             ) -> jnp.ndarray:
                 return cf_m
-    
+
             solver = jax.jit(dynamical_solver(
                 eq,
-                imex.BPR353(dt),
+                imex.BPR353(args.dt_dns),
                 source
             ))
 
-            iters = int((args.timespan + (time_coarse - time)) / dt)
+            _, time_s, start_ps_m, start_us_m, start_up_m, start_om_m = QgAnnulus.load(os.path.join(data_path, 'snapshot.h5'))
+            print(eq)
+
+            iters = int(np.ceil((args.timespan + (time - time_s)) / args.dt_dns))
+            sample_times = np.linspace(time_s, time + args.timespan, args.samples + 1)
             run_evaluation(
                 name='DNS',
                 solver=solver,
                 iters=iters,
-                sample_freq=int(iters / args.samples),
-                t0=time,
-                dt=dt,
+                sample_times=sample_times[1:],
+                t0=time_s,
+                dt=args.dt_dns,
                 states=(
-                    ps_m, us_m, up_m, om_m
+                    start_ps_m, start_us_m, start_up_m, start_om_m
                 ),
                 file=f
-            )
+            )   
 
-    # LES models    
-    file_0 = os.path.join(save_path, args.name + '_eval_0.h5')
+    # LES models
+    file_0 = os.path.join(
+        save_path, 
+        args.name + '_eval_0.h5'
+    )
     if not os.path.isfile(file_0):
         with h5py.File(file_0, 'w') as f:
+            eq_coarse = QgAnnulus(
+                E=eq.E,
+                cte_beta=eq.cte_beta,
+                radius_ratio=eq.s_i / eq.s_o,
+                n_m=int((eq.n_m - 1) / coarse_factor) + 1,
+                n_s=eq.n_s
+            )
+            
             cf_m = cartesian_forcing(eq_coarse, args.dx_f, args.radius_f, args.amp_f)
             def source(
                 ps_m: jnp.ndarray, 
@@ -102,28 +101,44 @@ def main(args: argparse.Namespace) -> None:
                 om_m: jnp.ndarray
             ) -> jnp.ndarray:
                 return cf_m
+
+            ps_mc, us_mc, up_mc, om_mc = galerkin_coarse_graining(eq, eq_coarse, ps_m, up_m[0])
     
             solver = jax.jit(dynamical_solver(
                 eq_coarse,
-                imex.BPR353(dt_coarse),
+                imex.BPR353(args.dt_0),
                 source
             ))
 
-            iters = int(args.timespan / dt_coarse)
+            iters = int(np.ceil(args.timespan / args.dt_0))
+            sample_times = np.linspace(time, time + args.timespan, args.samples + 1)
             run_evaluation(
                 name='`Under-resolved` model',
                 solver=solver,
                 iters=iters,
-                sample_freq=int(iters / args.samples),
-                t0=time_coarse,
-                dt=dt_coarse,
-                states=states_coarse,
+                sample_times=sample_times[1:],
+                t0=time,
+                dt=args.dt_0,
+                states=(
+                    ps_mc, us_mc, up_mc, om_mc
+                ),
                 file=f
             )
 
-    file_hdiff = os.path.join(save_path, args.name + '_eval_hdiff.h5')
+    file_hdiff = os.path.join(
+        save_path, 
+        args.name + '_eval_hdiff.h5'
+    )
     if not os.path.isfile(file_hdiff):
         with h5py.File(file_hdiff, 'w') as f:
+            eq_coarse = QgAnnulus(
+                E=eq.E,
+                cte_beta=eq.cte_beta,
+                radius_ratio=eq.s_i / eq.s_o,
+                n_m=int((eq.n_m - 1) / coarse_factor) + 1,
+                n_s=eq.n_s
+            )
+            
             cf_m = cartesian_forcing(eq_coarse, args.dx_f, args.radius_f, args.amp_f)
             def source(
                 ps_m: jnp.ndarray, 
@@ -133,37 +148,100 @@ def main(args: argparse.Namespace) -> None:
             ) -> jnp.ndarray:
                 return cf_m
 
+            ps_mc, us_mc, up_mc, om_mc = galerkin_coarse_graining(eq, eq_coarse, ps_m, up_m[0])
+
             h_diff = jnp.where(eq_coarse.m > args.hdiff_md, args.hdiff_amp**(eq_coarse.m - args.hdiff_md), 1.0)
             solver = jax.jit(dynamical_solver(
                 eq_coarse,
-                imex.BPR353(dt_coarse),
+                imex.BPR353(args.dt_hdiff),
                 source,
                 h_diff
             ))
 
-            iters = int(args.timespan / dt_coarse)
+            iters = int(np.ceil(args.timespan / args.dt_hdiff))
+            sample_times = np.linspace(time, time + args.timespan, args.samples + 1)
             run_evaluation(
                 name='`Hyperdiffusivity` model',
                 solver=solver,
                 iters=iters,
-                sample_freq=int(iters / args.samples),
-                t0=time_coarse,
-                dt=dt_coarse,
-                states=states_coarse,
+                sample_times=sample_times[1:],
+                t0=time,
+                dt=args.dt_hdiff,
+                states=(
+                    ps_mc, us_mc, up_mc, om_mc
+                ),
                 file=f
             )
 
-    file_learn = os.path.join(save_path, args.name + '_eval_learn.h5')
+    file_leith = os.path.join(
+        save_path,
+        args.name + '_eval_leith.h5'
+    )
+    if not os.path.isfile(file_leith):
+        with h5py.File(file_leith, 'w') as f:
+            eq_coarse = QgAnnulus(
+                E=eq.E,
+                cte_beta=eq.cte_beta,
+                radius_ratio=eq.s_i / eq.s_o,
+                n_m=int((eq.n_m - 1) / coarse_factor) + 1,
+                n_s=eq.n_s
+            )
+
+            cf_m = cartesian_forcing(eq_coarse, args.dx_f, args.radius_f, args.amp_f)
+            from models.classical_sgs import cyl_leith
+            def source(
+                ps_m: jnp.ndarray,
+                us_m: jnp.ndarray,
+                up_m: jnp.ndarray,
+                om_m: jnp.ndarray
+            ) -> jnp.ndarray:
+                return cf_m + cyl_leith(eq_coarse, args.leith_lam, ps_m, us_m, up_m, om_m, dt_coarse)
+
+            ps_mc, us_mc, up_mc, om_mc = galerkin_coarse_graining(eq, eq_coarse, ps_m, up_m[0])
+
+            solver = jax.jit(dynamical_solver(
+                eq_coarse,
+                imex.BPR353(args.dt_leith),
+                source,
+            ))
+
+            iters = int(np.ceil(args.timespan / args.dt_leith))
+            sample_times = np.linspace(time, time + args.timespan, args.samples + 1)
+            run_evaluation(
+                name='`Leith` model',
+                solver=solver,
+                iters=iters,
+                sample_times=sample_times[1:],
+                t0=time,
+                dt=args.dt_leith,
+                states=(
+                    ps_mc, us_mc, up_mc, om_mc
+                ),
+                file=f
+            )
+
+    file_learn = os.path.join(
+        save_path, 
+        args.name + '_eval_learn.h5'
+    )
     if not os.path.isfile(file_learn):
         with h5py.File(file_learn, 'w') as f:
+            eq_coarse = QgAnnulus(
+                E=eq.E,
+                cte_beta=eq.cte_beta,
+                radius_ratio=eq.s_i / eq.s_o,
+                n_m=int((eq.n_m - 1) / coarse_factor) + 1,
+                n_s=int((eq.n_s - 1) / coarse_factor) + 1
+            )
+            
             cf_m = cartesian_forcing(eq_coarse, args.dx_f, args.radius_f, args.amp_f)
 
             abstract_model = nnx.eval_shape(lambda: QgaNext(
                 in_features=3, # (us_m, up_m, om_m)
                 out_features=1, # tau_m
                 blocks=[(7, 32), (7, 64), (7, 128)],
-                means=jnp.zeros((3,)), 
-                stds=jnp.zeros((3,)),
+                means=jnp.zeros((3,), dtype=jnp.complex128), 
+                stds=jnp.zeros((3,), dtype=jnp.complex128),
                 activation=mod_relu,
                 rngs=nnx.Rngs(42)
             ))
@@ -172,8 +250,7 @@ def main(args: argparse.Namespace) -> None:
 
             checkpoint_path = os.path.join(data_path, args.name + '_checkpoint/')
             checkpointer = ocp.Checkpointer(ocp.StandardCheckpointHandler())
-            with warnings.catch_warnings(action='ignore'):
-                state = checkpointer.restore(checkpoint_path, abstract_state)
+            state = checkpointer.restore(checkpoint_path, abstract_state)
             eq_model = nnx.merge(graph, state)
 
             def tau(
@@ -189,23 +266,28 @@ def main(args: argparse.Namespace) -> None:
                 tau_m = tau(ps_m, us_m, up_m, om_m)
                 return cf_m + tau_m
 
+            ps_mc, us_mc, up_mc, om_mc = galerkin_coarse_graining(eq, eq_coarse, ps_m, up_m[0])
+            
             solver = jax.jit(dynamical_solver(
                 eq_coarse,
-                imex.BPR353(dt_coarse),
+                imex.BPR353(args.dt_learn),
                 source,
             ))
 
-            iters = int(args.timespan / dt_coarse)
+            iters = int(np.ceil(args.timespan / args.dt_learn))
+            sample_times = np.linspace(time, time + args.timespan, args.samples + 1)
             run_evaluation(
                 name='`Learned` model',
                 solver=solver,
                 iters=iters,
-                sample_freq=int(iters / args.samples),
-                t0=time_coarse,
-                dt=dt_coarse,
-                states=states_coarse,
+                sample_times=sample_times[1:],
+                t0=time,
+                dt=args.dt_learn,
+                states=(
+                    ps_mc, us_mc, up_mc, om_mc
+                ),
                 file=f,
-                compute_tau=tau,
+                #compute_tau=tau,
             )
             
 
@@ -213,7 +295,7 @@ def run_evaluation(
     name: str,
     solver: Callable,
     iters: int,
-    sample_freq: int,
+    sample_times: int,
     t0: float,
     dt: float,
     states: jnp.ndarray,
@@ -225,17 +307,18 @@ def run_evaluation(
     
     eval_time = []
 
-    sample_digits = len(str(int(iters / sample_freq)))
+    sample_digits = len(str(len(sample_times)))
+    sample_idx = 0
     print('Running evaluation for ' + name + '...')
     pbar = tqdm.tqdm(range(iters), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
     for i in pbar:            
         c, ps_m, us_m, up_m, om_m = solver(ps_m, us_m, up_m, om_m)
         if not np.isfinite(c):
             print(name + ' evaluation crashed with cfl =',c)
-            return
+            return False
         time += dt
 
-        if i % sample_freq == 0:
+        if sample_idx < len(sample_times) and time >= sample_times[sample_idx] - 0.5*dt:
             eval_time.append(time)
             tau_m = compute_tau(ps_m, us_m, up_m, om_m) if compute_tau else None
             write_sample(
@@ -246,10 +329,12 @@ def run_evaluation(
                 om_m, 
                 tau_m,
                 sample_digits, 
-                i // sample_freq
+                sample_idx
             )
+            sample_idx += 1
     file.create_dataset('time', 
                         data=np.array(eval_time))
+    return True
     
             
 def write_sample(
@@ -287,12 +372,20 @@ if __name__ == '__main__':
     parser.add_argument('-radius_f', type=float, default=0.04, help='Cartesian forcing: pump radius')
     parser.add_argument('-amp_f', type=float, default=2e10, help='Cartesian forcing: amplitude')
 
-    parser.add_argument('-hdiff_md', type=int, default=96, help='Hyperdiffusivity starting wavenumber')
-    parser.add_argument('-hdiff_amp', type=float, default=1.12, help='Hyperdiffusivity coefficient')
+    parser.add_argument('-hdiff_md', type=int, default=56, help='Hyperdiffusivity starting wavenumber')
+    parser.add_argument('-hdiff_amp', type=float, default=1.1, help='Hyperdiffusivity coefficient')
+    parser.add_argument('-leith_lam', type=float, default=2.0, help='Leith non-dimensional coefficient')
+
+    parser.add_argument('-dt_dns', type=float, help='Timestep for the DNS')
+    parser.add_argument('-dt_0', type=float, help='Timestep for the under-resolved simulation')
+    parser.add_argument('-dt_hdiff', type=float, help='Timestep for the hyperdiffusivity simulation')
+    parser.add_argument('-dt_leith', type=float, help='Timestep for the Leith model simulation')
+    parser.add_argument('-dt_learn', type=float, help='Timestep for the learned model simulation')
 
     parser.add_argument('-timespan', type=float, help='Temporal span of the evaluation', required=True)
     parser.add_argument('-samples', type=int, help='Number of saved statistical samples', required=True)
-    parser.add_argument('-save_path', type=str, help='File path for saving the field samples', required=True)
+    
+    parser.add_argument('-save_path', type=str, help='Path of the directory used to save samples', required=True)
     
     args = parser.parse_args()
     main(args)

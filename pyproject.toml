@@ -1,0 +1,15 @@
+[project]
+name = "online-sgs-qg-planetary"
+version = "0.1.0"
+description = "Implementation for the paper \"Online learning of subgrid-scale models for quasi-geostrophic turbulence in planetary interiors\""
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flax>=0.12.6",
+    "h5py>=3.16.0",
+    "jax[cuda12]>=0.9.2",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.8",
+    "optax>=0.2.8",
+    "tqdm>=4.67.3",
+]
