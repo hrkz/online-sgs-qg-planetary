@@ -1,14 +1,14 @@
 import h5py
 import numpy as np
-import scipy
 import jax
 import jax.numpy as jnp
 import jax.scipy as jns
+import matplotlib.pyplot as plt
 
 from typing import Callable, Optional, Tuple
 
-from models.imex_solver import Scheme
-from utils import (
+from .imex_solver import Scheme
+from .spectral import (
     into_m, 
     from_m, 
     coef_r, 
@@ -500,3 +500,46 @@ def hankel_spectrum(
     f_k[0 ] *= np.pi
     f_k[1:] *= 2 * np.pi
     return f_k
+
+# Visualization
+
+def plot_annulus(
+    eq,
+    f_m: jnp.ndarray,
+    cmap: str, 
+    label: str, 
+    vmin: float = None,
+    vmax: float = None,
+    levels: int = 95,
+    pcolor: bool = False
+):
+    """Plot a field in an annulus."""
+    f = from_m(f_m, eq.n_phi)
+    sf = np.append(f, np.expand_dims(f[0, :], axis=0), axis=0)
+    
+    ph = np.linspace(0.0, 2 * np.pi, eq.n_phi + 1)
+    rd = eq.s_grid
+    
+    pp, rr = np.meshgrid(ph, rd, indexing='ij')
+    xx = rr * np.cos(pp)
+    yy = rr * np.sin(pp)
+    
+    fig, axs = plt.subplots(ncols=1, nrows=1, figsize=(4.0, 3.0), constrained_layout=True)
+    if pcolor:
+        im = axs.pcolormesh(xx, yy, sf, cmap=cmap, antialiased=True,
+                            shading='gouraud', vmax=vmax, vmin=vmin,
+                            rasterized=False, edgecolors='face')
+    else:
+        cs = np.linspace(vmin, vmax, levels)
+        im = axs.contourf(xx, yy, sf, cs, 
+                          cmap=cmap, extend='both')
+
+    fig.colorbar(im, ax=axs, shrink=0.75, aspect=40, format='%.2e')
+    axs.plot(rd[ 0] * np.cos(ph), rd[ 0] * np.sin(ph), 'k-', lw=1.5)
+    axs.plot(rd[-1] * np.cos(ph), rd[-1] * np.sin(ph), 'k-', lw=1.5)
+    
+    axs.axis('off')
+    axs.set_xlim(1.01 * xx.min(), 1.01 * xx.max())
+    axs.set_ylim(1.01 * yy.min(), 1.01 * yy.max())
+    axs.text(0, 0, label, fontsize=15, va='center', ha='center')
+    return fig

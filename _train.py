@@ -10,7 +10,7 @@ import jax.numpy as jnp
 import jax.random as jnr
 
 jax.config.update(
-  'jax_enable_x64', True
+    "jax_enable_x64", True
 )
 
 from flax import nnx
@@ -26,21 +26,20 @@ from models.qg_annulus import (
 from models.qga_next import (
     QgaNext,
     mod_relu,
-    cx_gelu
 )
-from utils import (
-    quad_r
+from models.spectral import (
+    quad_r,
 )
 
 def main(args: argparse.Namespace) -> None:
-    data_path = os.path.join(os.path.join(os.getcwd(), 'data'), args.config)
-    eq, *_ = QgAnnulus.load(os.path.join(data_path, 'snapshot.h5'))
+    data_path = os.path.join(os.path.join(os.getcwd(), "data"), args.config)
+    eq, *_ = QgAnnulus.load(os.path.join(data_path, "snapshot.h5"))
     print(eq)
 
-    with h5py.File(os.path.join(data_path, args.name + '_dataset.h5'), 'r') as f:
-        dt = f.attrs['dt']
-        steps = f.attrs['steps']
-        coarse_factor = f.attrs['coarse_factor']
+    with h5py.File(os.path.join(data_path, args.name + "_dataset.h5"), "r") as f:
+        dt = f.attrs["dt"]
+        steps = f.attrs["steps"]
+        coarse_factor = f.attrs["coarse_factor"]
 
         n_m_coarse = int((eq.n_m - 1) / coarse_factor) + 1
         n_s_coarse = int((eq.n_s - 1) / coarse_factor) + 1
@@ -54,20 +53,20 @@ def main(args: argparse.Namespace) -> None:
     
         cf_m = cartesian_forcing(eq_coarse, args.dx_f, args.radius_f, args.amp_f)
         
-        t_0 = np.array(f['t_0'][:])
+        t_0 = np.array(f["t_0"][:])
         # (samples, features, m, r) -> (samples, m, r, features)
         f_m = np.moveaxis(
-            np.array(f['f_m'][:]), 
+            np.array(f["f_m"][:]), 
              1, 
             -1)
 
     f_means = np.mean(f_m.real, axis=(0, 1, 2)) + 1j*np.mean(f_m.imag, axis=(0, 1, 2))
     f_stds  = np.std (f_m.real, axis=(0, 1, 2)) + 1j*np.std (f_m.imag, axis=(0, 1, 2))
-    print('''Dataset statistics: 
+    print("""Dataset statistics: 
         ps_m = {:.4} ± σ({:.4})
         us_m = {:.4} ± σ({:.4})
         up_m = {:.4} ± σ({:.4})
-        om_m = {:.4} ± σ({:.4})'''.format(
+        om_m = {:.4} ± σ({:.4})""".format(
             f_means[0], f_stds[0],
             f_means[1], f_stds[1],
             f_means[2], f_stds[2],
@@ -139,8 +138,8 @@ def main(args: argparse.Namespace) -> None:
         return loss
 
     train_loss = []
-    print('Training model...')
-    pbar = tqdm.tqdm(range(args.epochs), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+    print("Training model...")
+    pbar = tqdm.tqdm(range(args.epochs), bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}")
     for i in pbar:
         key, subkey = jnr.split(key)
         data_sample = batch_gen(
@@ -163,10 +162,10 @@ def main(args: argparse.Namespace) -> None:
             )
         train_loss.append(t_loss / sub_trajs)
         
-    np.savez(os.path.join(data_path, args.name + '_loss.npz'), loss=train_loss)
-    print('Saving model parameters...')
+    np.savez(os.path.join(data_path, args.name + "_loss.npz"), loss=train_loss)
+    print("Saving model parameters...")
     _, state = nnx.split(eq_model)
-    checkpoint_path = os.path.join(data_path, args.name + '_checkpoint/')
+    checkpoint_path = os.path.join(data_path, args.name + "_checkpoint/")
     if os.path.exists(checkpoint_path):
         shutil.rmtree(checkpoint_path)
     checkpointer = ocp.Checkpointer(ocp.StandardCheckpointHandler())
@@ -222,21 +221,21 @@ def kinetic_energy_loss(
         us2_mis_int + up2_mis_int
     )
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog='python train.py',
-        description='Train a model using `online learning` from a pre-computed dataset'
+        prog="python train.py",
+        description="Train a model using `online learning` from a pre-computed dataset"
     )
     
-    parser.add_argument('-c', '--config', type=str, help='Name of the configuration', required=True)
-    parser.add_argument('-n', '--name', type=str, help='Name of the dataset', required=True)
+    parser.add_argument("-c", "--config", type=str, help="Name of the configuration", required=True)
+    parser.add_argument("-n", "--name", type=str, help="Name of the dataset", required=True)
 
-    parser.add_argument('-dx_f', type=float, default=0.08, help='Cartesian forcing: pump spacing')
-    parser.add_argument('-radius_f', type=float, default=0.04, help='Cartesian forcing: pump radius')
-    parser.add_argument('-amp_f', type=float, default=2e10, help='Cartesian forcing: amplitude')
+    parser.add_argument("-dx_f", type=float, default=0.08, help="Cartesian forcing: pump spacing")
+    parser.add_argument("-radius_f", type=float, default=0.04, help="Cartesian forcing: pump radius")
+    parser.add_argument("-amp_f", type=float, default=2e10, help="Cartesian forcing: amplitude")
 
-    parser.add_argument('-lr', type=float, help='Training learning rate', required=True)
-    parser.add_argument('-epochs', type=int, help='Number of training epochs', required=True)
+    parser.add_argument("-lr", type=float, help="Training learning rate", required=True)
+    parser.add_argument("-epochs", type=int, help="Number of training epochs", required=True)
     
     args = parser.parse_args()
     main(args)

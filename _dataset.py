@@ -8,7 +8,7 @@ import jax
 import jax.numpy as jnp
 
 jax.config.update(
-  'jax_enable_x64', True
+    "jax_enable_x64", True
 )
 
 import models.imex_solver as imex
@@ -20,8 +20,8 @@ from models.qg_annulus import (
 )
 
 def main(args: argparse.Namespace) -> None:
-    data_path = os.path.join(os.path.join(os.getcwd(), 'data'), args.config)
-    eq, time, ps_m, us_m, up_m, om_m = QgAnnulus.load(os.path.join(data_path, 'snapshot.h5'))
+    data_path = os.path.join(os.path.join(os.getcwd(), "data"), args.config)
+    eq, time, ps_m, us_m, up_m, om_m = QgAnnulus.load(os.path.join(data_path, "snapshot.h5"))
     print(eq)
 
     eq_coarse = QgAnnulus(
@@ -53,11 +53,11 @@ def main(args: argparse.Namespace) -> None:
 
     total_iters = args.samples * args.coarse_factor
     sub_trajs_freq = args.coarse_factor * args.steps
-    pbar = tqdm.tqdm(range(total_iters), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+    pbar = tqdm.tqdm(range(total_iters), bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}")
     for i in pbar:
         c, ps_m, us_m, up_m, om_m = solver(ps_m, us_m, up_m, om_m)
         if not np.isfinite(c):
-            print('Solver crashed with cfl =',c)
+            print("Solver crashed with cfl =",c)
             exit(1)
         time += args.dt
 
@@ -75,19 +75,19 @@ def main(args: argparse.Namespace) -> None:
                     up_m[0]
                 ))
 
-    print('Saving dataset...')
-    with h5py.File(os.path.join(data_path, args.name + '_dataset.h5'), 'w') as f:
-        f.attrs['dt'] = args.dt
-        f.attrs['steps'] = args.steps
-        f.attrs['coarse_factor'] = args.coarse_factor
+    print("Saving dataset...")
+    with h5py.File(os.path.join(data_path, args.name + "_dataset.h5"), "w") as f:
+        f.attrs["dt"] = args.dt
+        f.attrs["steps"] = args.steps
+        f.attrs["coarse_factor"] = args.coarse_factor
 
-        f.create_dataset('t_0',
+        f.create_dataset("t_0",
                          data=np.array(data_t0))
-        f.create_dataset('f_m',
+        f.create_dataset("f_m",
                          data=np.array(data_samples))
         
     eq.save(
-        os.path.join(data_path, args.name + '_snapshot.h5'),
+        os.path.join(data_path, args.name + "_snapshot.h5"),
         time,
         ps_m, 
         us_m, 
@@ -96,24 +96,24 @@ def main(args: argparse.Namespace) -> None:
     )
                 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog='python dataset.py',
-        description='Generate a dataset for `online learning` from a steady-state snapshot'
+        prog="python dataset.py",
+        description="Generate a dataset for `online learning` from a steady-state snapshot"
     )
     
-    parser.add_argument('-c', '--config', type=str, help='Name of the configuration', required=True)
-    parser.add_argument('-n', '--name', type=str, help='Name of the dataset', required=True)
+    parser.add_argument("-c", "--config", type=str, help="Name of the configuration", required=True)
+    parser.add_argument("-n", "--name", type=str, help="Name of the dataset", required=True)
 
-    parser.add_argument('-dt', type=float, help='Discrete (fixed) time step (for DNS)', required=True)
+    parser.add_argument("-dt", type=float, help="Discrete (fixed) time step (for DNS)", required=True)
 
-    parser.add_argument('-dx_f', type=float, default=0.08, help='Cartesian forcing: pump spacing')
-    parser.add_argument('-radius_f', type=float, default=0.04, help='Cartesian forcing: pump radius')
-    parser.add_argument('-amp_f', type=float, default=2e10, help='Cartesian forcing: amplitude')
+    parser.add_argument("-dx_f", type=float, default=0.08, help="Cartesian forcing: pump spacing")
+    parser.add_argument("-radius_f", type=float, default=0.04, help="Cartesian forcing: pump radius")
+    parser.add_argument("-amp_f", type=float, default=2e10, help="Cartesian forcing: amplitude")
     
-    parser.add_argument('-samples', type=int, help='Total number of samples for the dataset', required=True)
-    parser.add_argument('-steps', type=int, help='Number of discrete time steps for a sub-trajectory', required=True)
-    parser.add_argument('-coarse_factor', type=int, help='Coarsening factor for grid resolution and time step', required=True)
+    parser.add_argument("-samples", type=int, help="Total number of samples for the dataset", required=True)
+    parser.add_argument("-steps", type=int, help="Number of discrete time steps for a sub-trajectory", required=True)
+    parser.add_argument("-coarse_factor", type=int, help="Coarsening factor for grid resolution and time step", required=True)
     
     args = parser.parse_args()
     main(args)

@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import jax.random as jnr
 
 jax.config.update(
-  'jax_enable_x64', True
+    "jax_enable_x64", True
 )
 
 from flax import nnx
@@ -30,21 +30,21 @@ from models.qga_next import (
 )
 
 def main(args: argparse.Namespace) -> None:
-    data_path = os.path.join(os.path.join(os.getcwd(), 'data'), args.config)
-    eq, time, ps_m, us_m, up_m, om_m = QgAnnulus.load(os.path.join(data_path, args.name + '_snapshot.h5'))
+    data_path = os.path.join(os.path.join(os.getcwd(), "data"), args.config)
+    eq, time, ps_m, us_m, up_m, om_m = QgAnnulus.load(os.path.join(data_path, args.name + "_snapshot.h5"))
     print(eq)
 
     save_path = os.path.join(args.save_path, args.config)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    with h5py.File(os.path.join(data_path, args.name + '_dataset.h5'), 'r') as f:
-        coarse_factor = f.attrs['coarse_factor']
+    with h5py.File(os.path.join(data_path, args.name + "_dataset.h5"), "r") as f:
+        coarse_factor = f.attrs["coarse_factor"]
 
     # DNS
-    file_dns = os.path.join(save_path, args.name + '_eval_dns.h5')
+    file_dns = os.path.join(save_path, args.name + "_eval_dns.h5")
     if not os.path.isfile(file_dns):
-        with h5py.File(file_dns, 'w') as f:
+        with h5py.File(file_dns, "w") as f:
             cf_m = cartesian_forcing(eq, args.dx_f, args.radius_f, args.amp_f) 
             def source(
                 ps_m: jnp.ndarray, 
@@ -60,13 +60,13 @@ def main(args: argparse.Namespace) -> None:
                 source
             ))
 
-            _, time_s, start_ps_m, start_us_m, start_up_m, start_om_m = QgAnnulus.load(os.path.join(data_path, 'snapshot.h5'))
+            _, time_s, start_ps_m, start_us_m, start_up_m, start_om_m = QgAnnulus.load(os.path.join(data_path, "snapshot.h5"))
             print(eq)
 
             iters = int(np.ceil((args.timespan + (time - time_s)) / args.dt_dns))
             sample_times = np.linspace(time_s, time + args.timespan, args.samples + 1)
             run_evaluation(
-                name='DNS',
+                name="DNS",
                 solver=solver,
                 iters=iters,
                 sample_times=sample_times[1:],
@@ -81,10 +81,10 @@ def main(args: argparse.Namespace) -> None:
     # LES models
     file_0 = os.path.join(
         save_path, 
-        args.name + '_eval_0.h5'
+        args.name + "_eval_0.h5"
     )
     if not os.path.isfile(file_0):
-        with h5py.File(file_0, 'w') as f:
+        with h5py.File(file_0, "w") as f:
             eq_coarse = QgAnnulus(
                 E=eq.E,
                 cte_beta=eq.cte_beta,
@@ -113,7 +113,7 @@ def main(args: argparse.Namespace) -> None:
             iters = int(np.ceil(args.timespan / args.dt_0))
             sample_times = np.linspace(time, time + args.timespan, args.samples + 1)
             run_evaluation(
-                name='`Under-resolved` model',
+                name="`Under-resolved` model",
                 solver=solver,
                 iters=iters,
                 sample_times=sample_times[1:],
@@ -127,10 +127,10 @@ def main(args: argparse.Namespace) -> None:
 
     file_hdiff = os.path.join(
         save_path, 
-        args.name + '_eval_hdiff.h5'
+        args.name + "_eval_hdiff.h5"
     )
     if not os.path.isfile(file_hdiff):
-        with h5py.File(file_hdiff, 'w') as f:
+        with h5py.File(file_hdiff, "w") as f:
             eq_coarse = QgAnnulus(
                 E=eq.E,
                 cte_beta=eq.cte_beta,
@@ -161,7 +161,7 @@ def main(args: argparse.Namespace) -> None:
             iters = int(np.ceil(args.timespan / args.dt_hdiff))
             sample_times = np.linspace(time, time + args.timespan, args.samples + 1)
             run_evaluation(
-                name='`Hyperdiffusivity` model',
+                name="`Hyperdiffusivity` model",
                 solver=solver,
                 iters=iters,
                 sample_times=sample_times[1:],
@@ -175,10 +175,10 @@ def main(args: argparse.Namespace) -> None:
 
     file_leith = os.path.join(
         save_path,
-        args.name + '_eval_leith.h5'
+        args.name + "_eval_leith.h5"
     )
     if not os.path.isfile(file_leith):
-        with h5py.File(file_leith, 'w') as f:
+        with h5py.File(file_leith, "w") as f:
             eq_coarse = QgAnnulus(
                 E=eq.E,
                 cte_beta=eq.cte_beta,
@@ -208,7 +208,7 @@ def main(args: argparse.Namespace) -> None:
             iters = int(np.ceil(args.timespan / args.dt_leith))
             sample_times = np.linspace(time, time + args.timespan, args.samples + 1)
             run_evaluation(
-                name='`Leith` model',
+                name="`Leith` model",
                 solver=solver,
                 iters=iters,
                 sample_times=sample_times[1:],
@@ -222,10 +222,10 @@ def main(args: argparse.Namespace) -> None:
 
     file_learn = os.path.join(
         save_path, 
-        args.name + '_eval_learn.h5'
+        args.name + "_eval_learn.h5"
     )
     if not os.path.isfile(file_learn):
-        with h5py.File(file_learn, 'w') as f:
+        with h5py.File(file_learn, "w") as f:
             eq_coarse = QgAnnulus(
                 E=eq.E,
                 cte_beta=eq.cte_beta,
@@ -248,7 +248,7 @@ def main(args: argparse.Namespace) -> None:
 
             graph, abstract_state = nnx.split(abstract_model)
 
-            checkpoint_path = os.path.join(data_path, args.name + '_checkpoint/')
+            checkpoint_path = os.path.join(data_path, args.name + "_checkpoint/")
             checkpointer = ocp.Checkpointer(ocp.StandardCheckpointHandler())
             state = checkpointer.restore(checkpoint_path, abstract_state)
             eq_model = nnx.merge(graph, state)
@@ -277,7 +277,7 @@ def main(args: argparse.Namespace) -> None:
             iters = int(np.ceil(args.timespan / args.dt_learn))
             sample_times = np.linspace(time, time + args.timespan, args.samples + 1)
             run_evaluation(
-                name='`Learned` model',
+                name="`Learned` model",
                 solver=solver,
                 iters=iters,
                 sample_times=sample_times[1:],
@@ -309,12 +309,12 @@ def run_evaluation(
 
     sample_digits = len(str(len(sample_times)))
     sample_idx = 0
-    print('Running evaluation for ' + name + '...')
-    pbar = tqdm.tqdm(range(iters), bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+    print("Running evaluation for " + name + "...")
+    pbar = tqdm.tqdm(range(iters), bar_format="{l_bar}{bar:10}{r_bar}{bar:-10b}")
     for i in pbar:            
         c, ps_m, us_m, up_m, om_m = solver(ps_m, us_m, up_m, om_m)
         if not np.isfinite(c):
-            print(name + ' evaluation crashed with cfl =',c)
+            print(name + " evaluation crashed with cfl =",c)
             return False
         time += dt
 
@@ -332,7 +332,7 @@ def run_evaluation(
                 sample_idx
             )
             sample_idx += 1
-    file.create_dataset('time', 
+    file.create_dataset("time", 
                         data=np.array(eval_time))
     return True
     
@@ -347,45 +347,45 @@ def write_sample(
     sample_digits: int,
     i: int
 ):
-    file.create_dataset('ps_m_' + str(i).zfill(sample_digits),
+    file.create_dataset("ps_m_" + str(i).zfill(sample_digits),
                         data=np.array(ps_m))
-    file.create_dataset('us_m_' + str(i).zfill(sample_digits),
+    file.create_dataset("us_m_" + str(i).zfill(sample_digits),
                         data=np.array(us_m))
-    file.create_dataset('up_m_' + str(i).zfill(sample_digits),
+    file.create_dataset("up_m_" + str(i).zfill(sample_digits),
                         data=np.array(up_m))
-    file.create_dataset('om_m_' + str(i).zfill(sample_digits),
+    file.create_dataset("om_m_" + str(i).zfill(sample_digits),
                         data=np.array(om_m))
     if tau_m != None:
-        file.create_dataset('tau_m_' + str(i).zfill(sample_digits),
+        file.create_dataset("tau_m_" + str(i).zfill(sample_digits),
                             data=np.array(tau_m))
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog='python eval.py',
-        description='Evaluate the trained model against reference DNS and baselines'
+        prog="python eval.py",
+        description="Evaluate the trained model against reference DNS and baselines"
     )
     
-    parser.add_argument('-c', '--config', type=str, help='Name of the configuration', required=True)
-    parser.add_argument('-n', '--name', type=str, help='Name of the dataset', required=True)
+    parser.add_argument("-c", "--config", type=str, help="Name of the configuration", required=True)
+    parser.add_argument("-n", "--name", type=str, help="Name of the dataset", required=True)
 
-    parser.add_argument('-dx_f', type=float, default=0.08, help='Cartesian forcing: pump spacing')
-    parser.add_argument('-radius_f', type=float, default=0.04, help='Cartesian forcing: pump radius')
-    parser.add_argument('-amp_f', type=float, default=2e10, help='Cartesian forcing: amplitude')
+    parser.add_argument("-dx_f", type=float, default=0.08, help="Cartesian forcing: pump spacing")
+    parser.add_argument("-radius_f", type=float, default=0.04, help="Cartesian forcing: pump radius")
+    parser.add_argument("-amp_f", type=float, default=2e10, help="Cartesian forcing: amplitude")
 
-    parser.add_argument('-hdiff_md', type=int, default=56, help='Hyperdiffusivity starting wavenumber')
-    parser.add_argument('-hdiff_amp', type=float, default=1.1, help='Hyperdiffusivity coefficient')
-    parser.add_argument('-leith_lam', type=float, default=2.0, help='Leith non-dimensional coefficient')
+    parser.add_argument("-hdiff_md", type=int, default=56, help="Hyperdiffusivity starting wavenumber")
+    parser.add_argument("-hdiff_amp", type=float, default=1.1, help="Hyperdiffusivity coefficient")
+    parser.add_argument("-leith_lam", type=float, default=2.0, help="Leith non-dimensional coefficient")
 
-    parser.add_argument('-dt_dns', type=float, help='Timestep for the DNS')
-    parser.add_argument('-dt_0', type=float, help='Timestep for the under-resolved simulation')
-    parser.add_argument('-dt_hdiff', type=float, help='Timestep for the hyperdiffusivity simulation')
-    parser.add_argument('-dt_leith', type=float, help='Timestep for the Leith model simulation')
-    parser.add_argument('-dt_learn', type=float, help='Timestep for the learned model simulation')
+    parser.add_argument("-dt_dns", type=float, help="Timestep for the DNS")
+    parser.add_argument("-dt_0", type=float, help="Timestep for the under-resolved simulation")
+    parser.add_argument("-dt_hdiff", type=float, help="Timestep for the hyperdiffusivity simulation")
+    parser.add_argument("-dt_leith", type=float, help="Timestep for the Leith model simulation")
+    parser.add_argument("-dt_learn", type=float, help="Timestep for the learned model simulation")
 
-    parser.add_argument('-timespan', type=float, help='Temporal span of the evaluation', required=True)
-    parser.add_argument('-samples', type=int, help='Number of saved statistical samples', required=True)
+    parser.add_argument("-timespan", type=float, help="Temporal span of the evaluation", required=True)
+    parser.add_argument("-samples", type=int, help="Number of saved statistical samples", required=True)
     
-    parser.add_argument('-save_path', type=str, help='Path of the directory used to save samples', required=True)
+    parser.add_argument("-save_path", type=str, help="Path of the directory used to save samples", required=True)
     
     args = parser.parse_args()
     main(args)

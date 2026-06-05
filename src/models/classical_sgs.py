@@ -1,11 +1,8 @@
 import jax
 import jax.numpy as jnp
 
-from models.qg_annulus import (
-    QgAnnulus
-)
-
-from utils import (
+from .qg_annulus import QgAnnulus
+from .spectral import (
     into_m, 
     from_m, 
     diff_r,
