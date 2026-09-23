@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="https://github.com/hrkz/online-sgs-qg-planetary/blob/main/graphical-abstract.png" alt="Repository Abstract" width="400"/>
-</p>
-
-> This repository contains a JAX implementation for the paper ["Online learning of subgrid-scale models for quasi-geostrophic turbulence in planetary interiors"](https://arxiv.org/abs/2511.14581) submitted to the Journal of Fluid Mechanics (JFM). It can be used to reproduce results presented in the manuscript.
+> This repository contains a JAX implementation for the paper ["Online learning of subgrid-scale models for quasi-geostrophic turbulence in planetary interiors"](https://arxiv.org/abs/2511.14581) submitted to Physical Review Fluids (PRF). It can be used to reproduce results presented in the manuscript.
 
 ---
 
@@ -17,7 +13,7 @@ cd online-sgs-qg-planetary
 uv sync
 ```
 
-Note: you need the access to a GPU device since the default requirement packages are based on the CUDA version of JAX. Running the code on CPU is posible, but modification of the `pyproject.toml` file is necessary.
+Note: you need the access to a GPU device since the default requirement packages are based on the CUDA version of JAX. Running the code on CPU is possible, but modification of the `pyproject.toml` file is necessary.
 
 ## 🚀 Reproducing results
 
