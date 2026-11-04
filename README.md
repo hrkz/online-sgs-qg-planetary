@@ -4,7 +4,7 @@
 
 ## 📦 Getting started
 
-To set up and run the Python scripts and notebooks, we use [uv](https://docs.astral.sh/uv/) to manage package dependencies in a custom environment
+To set up and run the Python scripts and notebooks, we use [uv](https://docs.astral.sh/uv/) to manage package dependencies in a custom environment.
 
 1. **Set up the environment**
 
